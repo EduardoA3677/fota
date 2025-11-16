@@ -12,6 +12,7 @@ Algorithm: idmSecurityMakeSECDevicePassword(clientId, nonce)
 
 import hashlib
 import sys
+import argparse
 
 # szDict array from IDMSecurityInterface.smali:array_b2
 # This is a 40-byte dictionary used in key generation
@@ -117,43 +118,99 @@ def generate_client_password(client_id: str, nonce: str) -> str:
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description='Samsung FOTA Client Password Generator',
+        epilog='Based on IDMSecurity.smali analysis'
+    )
+    parser.add_argument('-i', '--imei', help='Device IMEI')
+    parser.add_argument('-c', '--challenge', '--nonce', 
+                       help='Challenge/Nonce from Samsung server')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                       help='Quiet mode - only output password')
+    
+    args = parser.parse_args()
+    
+    # If both IMEI and challenge provided, generate directly
+    if args.imei and args.challenge:
+        client_id = f"{args.imei}:{args.imei}"
+        password = generate_client_password(client_id, args.challenge)
+        if args.quiet:
+            print(password)
+        else:
+            print(f"Client ID: {client_id}")
+            print(f"Challenge: {args.challenge}")
+            print(f"Password:  {password}")
+        return 0
+    
+    # Otherwise, run interactive demo mode
     print("=" * 70)
     print("Samsung FOTA Client Password Generator")
     print("Based on IDMSecurity.smali analysis")
     print("=" * 70)
     print()
     
-    # Test data provided by user
-    imei = "352496803361546"
+    # Test data provided by user - Dual SIM device
+    imei1 = "355378413361545"  # SIM 1 IMEI (without /19 suffix)
+    imei2 = "352496803361546"  # SIM 2 IMEI (without /19 suffix)
     eid = "89043051202200836223007061956540"
     serial = "R5CW82XYYDL"
     
-    print("Device Information:")
-    print(f"  IMEI:   {imei}")
+    # Real challenge from Samsung server
+    real_challenge = "dKUtIqDcuw"
+    
+    print("Device Information (Dual SIM):")
+    print(f"  IMEI 1: {imei1}/19")
+    print(f"  IMEI 2: {imei2}/19")
     print(f"  EID:    {eid}")
     print(f"  Serial: {serial}")
     print()
-    
-    # Client ID format is "IMEI:IMEI" based on smali analysis
-    client_id = f"{imei}:{imei}"
-    
-    print("Client ID (IMEI:IMEI format):")
-    print(f"  {client_id}")
+    print(f"Real Challenge/Nonce: {real_challenge}")
     print()
     
-    # Example nonces to test
+    # Test with both IMEIs for dual SIM device
+    print("=" * 70)
+    print("GENERATED PASSWORDS WITH REAL CHALLENGE")
+    print("=" * 70)
+    print()
+    
+    # Test IMEI 1 (SIM 1)
+    client_id1 = f"{imei1}:{imei1}"
+    print(f"SIM 1 - Client ID: {client_id1}")
+    try:
+        password1 = generate_client_password(client_id1, real_challenge)
+        print(f"  Challenge: {real_challenge}")
+        print(f"  Password:  {password1}")
+        print()
+    except Exception as e:
+        print(f"  Error: {e}")
+        print()
+    
+    # Test IMEI 2 (SIM 2)
+    client_id2 = f"{imei2}:{imei2}"
+    print(f"SIM 2 - Client ID: {client_id2}")
+    try:
+        password2 = generate_client_password(client_id2, real_challenge)
+        print(f"  Challenge: {real_challenge}")
+        print(f"  Password:  {password2}")
+        print()
+    except Exception as e:
+        print(f"  Error: {e}")
+        print()
+    
+    # Also test with example nonces for comparison
+    print("-" * 70)
+    print("EXAMPLE PASSWORDS (for testing)")
+    print("-" * 70)
+    print()
+    
     test_nonces = [
         "test_nonce_123",
-        "ABC123DEF456",
-        "sample_server_nonce"
+        "ABC123DEF456"
     ]
-    
-    print("Generated Client Passwords:")
-    print("-" * 70)
     
     for nonce in test_nonces:
         try:
-            password = generate_client_password(client_id, nonce)
+            password = generate_client_password(client_id2, nonce)
             print(f"Nonce:    {nonce}")
             print(f"Password: {password}")
             print()
@@ -163,36 +220,41 @@ def main():
     
     print("=" * 70)
     print()
-    print("NOTE: This is a simplified implementation based on smali analysis.")
-    print("The real algorithm includes additional encryption steps from")
-    print("IDMSecurityCrypt.idmCryptGenerate() which requires DES encryption")
-    print("with device-specific keys.")
+    print("IMPORTANT NOTES:")
+    print("=" * 70)
     print()
-    print("To get the ACTUAL password, you need:")
-    print("1. The real nonce from the Samsung server")
-    print("2. Complete IDMSecurityCrypt implementation (DES-based)")
-    print("3. Device-specific salt values")
+    print("1. This implementation uses the REAL challenge from Samsung server:")
+    print(f"   Challenge: {real_challenge}")
     print()
-    print("Algorithm source:")
-    print("  File: com/idm/core/security/IDMSecurity.smali")
-    print("  Method: idmMakeSECFBDevicePassWord(String, String)")
-    print("  Lines: ~400-550")
+    print("2. Dual SIM devices have two IMEIs - both were tested above")
+    print()
+    print("3. This is a simplified implementation based on smali analysis.")
+    print("   The full algorithm includes additional encryption steps from")
+    print("   IDMSecurityCrypt.idmCryptGenerate() which requires DES encryption")
+    print("   with device-specific keys.")
+    print()
+    print("4. Algorithm source:")
+    print("   File: com/idm/core/security/IDMSecurity.smali")
+    print("   Method: idmMakeSECFBDevicePassWord(String, String)")
+    print("   Lines: ~400-550")
     print()
     
     # Interactive mode
     print("=" * 70)
-    print("Interactive Mode")
+    print("Interactive Mode - Test with custom values")
     print("=" * 70)
     
     try:
-        custom_imei = input("\nEnter IMEI (or press Enter to use default): ").strip()
+        print(f"\nDefault IMEI 1: {imei1}")
+        print(f"Default IMEI 2: {imei2}")
+        custom_imei = input("Enter IMEI (or press Enter to use IMEI 2): ").strip()
         if not custom_imei:
-            custom_imei = imei
+            custom_imei = imei2
         
-        custom_nonce = input("Enter nonce from server: ").strip()
+        print(f"\nDefault challenge: {real_challenge}")
+        custom_nonce = input("Enter challenge/nonce (or press Enter to use real one): ").strip()
         if not custom_nonce:
-            print("No nonce provided, using test nonce")
-            custom_nonce = "test_nonce"
+            custom_nonce = real_challenge
         
         custom_client_id = f"{custom_imei}:{custom_imei}"
         password = generate_client_password(custom_client_id, custom_nonce)
@@ -200,7 +262,7 @@ def main():
         print()
         print("Result:")
         print(f"  Client ID: {custom_client_id}")
-        print(f"  Nonce:     {custom_nonce}")
+        print(f"  Challenge: {custom_nonce}")
         print(f"  Password:  {password}")
         print()
         
