@@ -2,317 +2,550 @@
 # Samsung OTA Firmware Analyzer Agent
 
 name: Samsung OTA Firmware Analyzer
-description: Analiza exhaustivamente código smali en classes2_smali y genera scripts Python modulares para descargar actualizaciones OTA de Samsung
+description: Analiza exhaustivamente código smali en classes2_smali y genera scripts modulares para descargar actualizaciones OTA de Samsung
 
 ---
 
 ## Descripción General
 
-Este agente personalizado para GitHub Copilot realiza análisis profundo de código smali extraído de firmware de Samsung, identifica patrones de actualización OTA (Over-The-Air) y genera scripts Python automatizados y modulares que recrean el proceso de descarga de actualizaciones.
+Este agente personalizado para GitHub Copilot realiza análisis profundo de código smali extraído de firmware de Samsung, identifica patrones de actualización OTA (Over-The-Air) y genera scripts Python automatizados que recrean el proceso de descarga de actualizaciones.
 
 ### Funcionalidades Principales
 
 1. **Análisis Smali Automático**: Escanea la carpeta `classes2_smali` y extrae:
    - Endpoints de descarga OTA
-   - Métodos de autenticación
+   - Métodos de autenticación y cifrado
    - Parámetros requeridos (IMEI, CSC, Serial, Model, etc.)
    - Versiones de firmware disponibles
    - Algoritmos de validación y checksums
+   - Procesos de encriptación de datos
 
-2. **Generación de Scripts Python Modulares**: Crea scripts con estructura profesional:
-   - Módulos separados por funcionalidad
-   - Manejo de excepciones robusto
-   - Logging detallado
-   - Soporte multiversión de firmware
+2. **Configuración Flexible**: Soporta múltiples formas de input:
+   - Archivo de configuración `config.cfg` con ruta personalizable
+   - Argumentos de línea de comandos: `--config`, `--imei`, `--csc`, `--serial`, `--model`
+   - Input interactivo como fallback
+   - Validación exhaustiva de parámetros
 
-3. **Interfaz Interactiva**: El script solicita información:
-   - IMEI
-   - CSC (Country Service Code)
-   - Serial Number
-   - Model (SM-XXXX)
-   - Región
-   - Versión de firmware a descargar
+3. **Descarga de Manifiestos de Versión**: 
+   - Descarga automática de `version.xml` para entender estructura
+   - Soporte para múltiples fuentes: `version.xml` y `version.test.xml`
+   - Permite al usuario seleccionar cuál utilizar
+   - Parseo inteligente de manifiestos
 
-4. **Documentación Automática**: Genera archivo `.md` con:
+4. **Gestión de Versiones Multiples**: 
+   - Lista versiones disponibles desde manifiestos
+   - Permite seleccionar versión específica
+   - Soporte para versiones de prueba y producción
+
+5. **Autenticación y Cifrado**: 
+   - Recrea procesos de autenticación del código smali
+   - Implementa algoritmos de cifrado identificados
+   - Maneja tokens y sesiones de autenticación
+   - Validación de credenciales
+
+6. **Documentación Automática**: Genera archivo `.md` con:
    - Análisis detallado de cada función smali
+   - Procesos de autenticación y cifrado reverse-engineered
+   - Estructura de manifiestos parseados
    - Flujo de actualización OTA
-   - Guía de uso del script
+   - Guía de uso completa
    - Parámetros identificados
 
 ---
 
 ## Estructura del Flujo de Trabajo
 
-### Fase 1: Análisis Smali
+### Fase 1: Análisis Smali Exhaustivo
 ```
-fota/classes2_smali/ 
+classes2_smali/ 
   ├── Extraer métodos de descarga
-  ├── Identificar endpoints
-  ├── Mapear parámetros
-  └── Documentar versiones disponibles
+  ├── Identificar endpoints OTA
+  ├── Mapear parámetros de dispositivo
+  ├── Analizar procesos de autenticación
+  ├── Reverse-engineer cifrado
+  ├── Documentar versiones disponibles
+  └── Extraer algoritmos de validación
 ```
 
-### Fase 2: Generación de Script
+### Fase 2: Descarga de Manifiestos
 ```
-fota/scripts/
-  ├── ota_downloader.py (módulo principal)
-  ├── samsung_api.py (cliente API)
-  ├── firmware_manager.py (gestión de versiones)
-  ├── device_info.py (información del dispositivo)
-  └── utils.py (funciones auxiliares)
+Descargar version.xml
+  ├── Analizar estructura XML
+  ├── Identificar campos de versión
+  ├── Extraer URLs de descarga
+  ├── Mapear parámetros de firmware
+  └── Documentar para referencia
 ```
 
-### Fase 3: Documentación
+### Fase 3: Generación de Script Principal
 ```
-fota/ANALYSIS_REPORT.md
+Script modular que:
+  ├── Carga configuración desde config.cfg o argumentos CLI
+  ├── Valida información del dispositivo
+  ├── Descarga manifiestos (version.xml / version.test.xml)
+  ├── Presenta opciones al usuario
+  ├── Implementa autenticación
+  ├── Aplica cifrado según smali
+  └── Descarga firmware
+```
+
+### Fase 4: Documentación Completa
+```
+ANALYSIS_REPORT.md contiene:
   ├── Resumen del análisis smali
-  ├── Funciones identificadas
+  ├── Funciones de autenticación identificadas
+  ├── Procesos de cifrado reverse-engineered
+  ├── Estructura de manifiestos parseados
   ├── Parámetros extraídos
-  └── Instrucciones de uso
+  ├── Instrucciones de uso
+  └── Ejemplos de ejecución
 ```
 
 ---
 
-## Instrucciones de Uso del Agente
+## Sistema de Configuración
 
-### Invocación
+### Archivo config.cfg (ejemplo)
 
-Usa el Copilot CLI para invocar el agente:
+El usuario puede crear un archivo de configuración con estructura (ejemplo):
 
-```bash
-gh copilot agent -a "Samsung OTA Firmware Analyzer" "Analiza el código smali en classes2_smali y genera un script OTA"
+```ini
+[device]
+imei = 123456789012345
+csc = MXO
+serial_number = ABC123DEF456
+model = SM-G950F
+region = MX
+
+[server]
+manifest_url_prod = https://fus.samsungmobile.com/fus/version.xml
+manifest_url_test = https://fus.samsungmobile.com/fus/version.test.xml
+primary_manifest = prod
+
+[authentication]
+# Extraído del análisis smali
+auth_method = knox_based
+encryption_type = aes256
+
+[download]
+timeout_seconds = 300
+verify_checksums = true
+max_retries = 3
 ```
 
-### Preguntas Recomendadas
+### Argumentos de Línea de Comandos
 
-1. **Análisis Inicial**:
-   - "Analiza el código smali en classes2_smali y extrae todos los endpoints OTA"
-   - "¿Qué parámetros se requieren para la descarga de firmware?"
+El script soporta argumentos flexibles:
 
-2. **Generación de Script**:
-   - "Genera un script Python modular que descargue firmware OTA con los parámetros identificados"
-   - "Crea un gestor de versiones de firmware"
+```bash
+# Con archivo de configuración
+python script.py --config /ruta/config.cfg
 
-3. **Descarga**:
-   - "¿Cómo descargar múltiples versiones de firmware?"
-   - "Crea el script con soporte para seleccionar versión"
+# Con argumentos individuales (sobrescriben config.cfg)
+python script.py --config config.cfg --imei 123456789012345 --csc MXO
+
+# Solo argumentos sin config
+python script.py --imei 123456789012345 --csc MXO --serial ABC123 --model SM-G950F
+
+# Especificar qué manifiesto usar
+python script.py --config config.cfg --manifest test
+```
+
+### Orden de Prioridad
+
+1. Argumentos de línea de comandos (máxima prioridad)
+2. Variables de entorno (si existen)
+3. Archivo config.cfg (si se especifica)
+4. Input interactivo (fallback)
+
+---
+
+## Descarga y Parseo de Manifiestos
+
+### Proceso de Descarga
+
+El script debe:
+
+1. **Descargar manifiestos disponibles**
+   - Intentar `version.xml` (producción)
+   - Intentar `version.test.xml` (testing)
+   - Guardar ambos para análisis
+
+2. **Analizar estructura XML**
+   - Identificar nodos de versión
+   - Extraer números de versión
+   - Mapear URLs de descarga
+   - Detectar checksums
+
+3. **Presentar opciones al usuario**
+   ```
+   ╔════════════════════════════════╗
+   ║  MANIFIESTOS DISPONIBLES       ║
+   ╠════════════════════════════════╣
+   ║ [1] version.xml (Producción)   ║
+   ║     Versiones: 5               ║
+   ║     Más reciente: 12.0.1       ║
+   ║                                ║
+   ║ [2] version.test.xml (Testing) ║
+   ║     Versiones: 8               ║
+   ║     Más reciente: 12.1.0 (beta)║
+   ╚════════════════════════════════╝
+   
+   Selecciona manifiesto: _
+   ```
+
+4. **Listar versiones disponibles**
+   ```
+   ╔════════════════════════════════╗
+   ║  VERSIONES DISPONIBLES         ║
+   ╠════════════════════════════════╣
+   ║ [1] v12.0.1                    ║
+   ║     Build: G950FXXU6CTI5       ║
+   ║     Tamaño: 2.4 GB             ║
+   ║     Fecha: 2024-11-15          ║
+   ║                                ║
+   ║ [2] v12.0.0                    ║
+   ║     Build: G950FXXU6CTI4       ║
+   ║     Tamaño: 2.3 GB             ║
+   ║     Fecha: 2024-11-01          ║
+   ╚════════════════════════════════╝
+   ```
+
+### Estructura Esperada de version.xml
+
+El agente debe analizar y documentar estructura similar a:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<firmware>
+  <version>
+    <name>G950FXXU6CTI5</name>
+    <fw_ver>G950FXXU6CTI5</fw_ver>
+    <build_date>20241115</build_date>
+    <size>2535301120</size>
+    <crc>a1b2c3d4e5f6g7h8</crc>
+    <binary>
+      <url>/firmware/g950f/latest.zip</url>
+      <md5>hash_here</md5>
+    </binary>
+  </version>
+  <!-- Más versiones -->
+</firmware>
+```
+
+---
+
+## Autenticación y Cifrado
+
+### Análisis de Métodos Smali
+
+El agente debe identificar y documentar en el análisis:
+
+1. **Métodos de Autenticación**
+   - Knox-based authentication
+   - Token generation algorithms
+   - Session management
+   - Certificate validation
+   - IMEI/Serial verification
+
+2. **Procesos de Cifrado Identificados**
+   - Algoritmos de encriptación (AES, RSA, etc.)
+   - Key derivation methods
+   - IV (Initialization Vector) generation
+   - Hmac computation
+   - Signature verification
+
+3. **Flujo Completo de Autenticación**
+   - Extracción de credenciales
+   - Construcción de requests autenticados
+   - Validación de respuestas
+   - Manejo de tokens expirados
+   - Reintentos automáticos
+
+### Implementación en Script
+
+El script debe:
+
+```
+1. Parsear métodos de autenticación del análisis smali
+2. Implementar generación de tokens
+3. Aplicar cifrado a datos sensibles
+4. Validar respuestas del servidor
+5. Manejar errores de autenticación
+6. Registrar procesos en logs detallados
+```
+
+---
+
+## Flujo de Descarga OTA Completo
+
+```
+┌─────────────────────────────────────┐
+│  Inicio: Leer Config CLI/config.cfg  │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Validar Información del Dispositivo │
+│  (IMEI, CSC, Serial, Model)        │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Descargar Manifiestos              │
+│  (version.xml, version.test.xml)   │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Permitir Usuario Seleccionar       │
+│  Manifiesto y Versión              │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Autenticarse con Samsung OTA Server │
+│  (Knox/Credenciales Identificadas) │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Obtener URL de Descarga Cifrada     │
+│  (Aplicar Encriptación del Análisis)│
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Descargar Firmware .zip             │
+│  (Con barra de progreso)             │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Validar Checksum/Firma              │
+│  (Según métodos en smali)            │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│  Descarga Completada ✓              │
+│  Guardar Log y Metadatos            │
+└─────────────────────────────────────┘
+```
+
+---
+
+## Instrucciones para Invocar el Agente
+
+### Uso del Copilot CLI
+
+```bash
+# Invocación básica
+gh copilot agent -a "Samsung OTA Firmware Analyzer" \
+  "Analiza código smali y genera script OTA"
+
+# Con instrucciones específicas
+gh copilot agent -a "Samsung OTA Firmware Analyzer" \
+  "Analiza classes2_smali, descarga version.xml para entender estructura, \
+   y genera script que soporte config.cfg, argumentos CLI como --imei, \
+   --csc, --serial, --model, manejo de autenticación y cifrado"
+
+# Para regenerar después de cambios
+gh copilot agent -a "Samsung OTA Firmware Analyzer" \
+  "Regenera análisis smali y scripts, lee ANALYSIS_REPORT.md previamente"
+```
 
 ---
 
 ## Características del Script Generado
 
-### Módulo Principal: `ota_downloader.py`
+### Soporta Múltiples Formas de Input
 
-El script incluye:
-
-- **Input Interactivo**: Solicita IMEI, CSC, Serial, Model
-- **Validación de Datos**: Verifica formato de parámetros
-- **Soporte Multiversión**: Lista y permite seleccionar versiones
-- **Descarga Automatizada**: Descarga .zip del firmware
-- **Logging**: Registro detallado de operaciones
-- **Modulación**: Componentes reutilizables
-
-### Módulos Auxiliares
-
-**samsung_api.py**
-- Conexión a servidores Samsung
-- Autenticación
-- Consulta de versiones disponibles
-
-**firmware_manager.py**
-- Gestión de versiones de firmware
-- Comparación de versiones
-- Descarga selectiva
-
-**device_info.py**
-- Validación de IMEI
-- Validación de CSC
-- Información del dispositivo
-
-**utils.py**
-- Funciones de utilidad
-- Manejo de errores
-- Formateo de datos
-
----
-
-## Archivos Generados
-
-Después de ejecutar el agente:
-
-```
-fota/
-├── .github/agents/
-│   └── my-agent.agent.md (este archivo)
-├── scripts/
-│   ├── ota_downloader.py
-│   ├── samsung_api.py
-│   ├── firmware_manager.py
-│   ├── device_info.py
-│   └── utils.py
-├── ANALYSIS_REPORT.md (generado por el agente)
-└── classes2_smali/ (ya existente)
-```
-
----
-
-## Proceso de Actualización del Agente
-
-### Ciclo de Vida
-
-1. **Primera Ejecución**: El agente analiza `classes2_smali` y genera:
-   - Scripts Python en `fota/scripts/`
-   - Documentación inicial en `ANALYSIS_REPORT.md`
-
-2. **Lecturas Posteriores**: Antes de cada regeneración:
-   - Lee `ANALYSIS_REPORT.md`
-   - Preserva hallazgos previos
-   - Identifica cambios nuevos en código smali
-
-3. **Regeneración**: Al actualizar:
-   - Mantiene compatibilidad con versiones previas
-   - Actualiza documentación
-   - Versionea cambios
-
-### Comando para Regenerar
-
+**Opción 1: Archivo de Configuración**
 ```bash
-gh copilot agent -a "Samsung OTA Firmware Analyzer" "Regenera el análisis y scripts OTA, lee primero ANALYSIS_REPORT.md"
+./script.py --config config.cfg
 ```
+
+**Opción 2: Argumentos CLI**
+```bash
+./script.py --imei 123456789012345 --csc MXO --serial ABC123 --model SM-G950F
+```
+
+**Opción 3: Configuración + Argumentos (CLI sobrescriben config)**
+```bash
+./script.py --config config.cfg --imei 999999999999999
+```
+
+**Opción 4: Interactivo (sin argumentos)**
+```bash
+./script.py
+```
+
+### Descarga de Manifiestos
+
+- Descarga automática de `version.xml` para entender estructura
+- Detecta y ofrece `version.test.xml` si existe
+- Usuario elige qué manifiesto utilizar
+- Parsea y extrae todas las versiones disponibles
+- Muestra opciones de forma clara y ordenada
+
+### Autenticación y Cifrado
+
+- Implementa procesos de autenticación extraídos del smali
+- Aplica métodos de cifrado identificados
+- Maneja tokens y sesiones
+- Valida respuestas del servidor
+- Registra todos los pasos en logs detallados
+
+### Manejo de Errores
+
+- Validación exhaustiva de parámetros
+- Reintentos automáticos en fallos
+- Mensajes de error descriptivos
+- Logging completo para debugging
 
 ---
 
-## Parámetros Identificados en Análisis Smali
+## Archivo ANALYSIS_REPORT.md
 
-El agente busca automáticamente estos parámetros:
-
-| Parámetro | Descripción | Fuente |
-|-----------|-------------|--------|
-| IMEI | Identificador único del dispositivo | Device Registry |
-| CSC | Código de región/servicio | Device Configuration |
-| Serial | Número de serie | Device Info |
-| Model | Modelo (SM-XXXX) | Device Properties |
-| Region | Región geográfica | CSC Mapping |
-| Build Version | Versión actual del firmware | Device Build |
-| Target Version | Versión de destino | OTA Manifest |
-| Firmware URL | URL del archivo .zip | OTA Server |
-| Checksum | Validación SHA256 | Manifest |
-
----
-
-## Flujo de Descarga OTA
-
-```
-┌─────────────────────────────────┐
-│  Usuario Inicia Script          │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Input: IMEI, CSC, Serial, etc  │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Validar Parámetros             │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Conectar a Samsung OTA Server   │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Listar Versiones Disponibles    │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Usuario Selecciona Versión      │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Obtener URL de Descarga         │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Descargar .zip del Firmware     │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Validar Checksum               │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Descarga Completada ✓          │
-└─────────────────────────────────┘
-```
-
----
-
-## Documentación de Análisis Smali
-
-El archivo `ANALYSIS_REPORT.md` generado contiene:
+El agente genera reporte con:
 
 ### Sección 1: Resumen Ejecutivo
 - Endpoints OTA identificados
-- Métodos de autenticación
+- Métodos de autenticación hallados
+- Algoritmos de cifrado reverse-engineered
 - Versiones de firmware encontradas
+- Parámetros requeridos
 
-### Sección 2: Análisis Detallado por Función
-Para cada método smali relevante:
-- Nombre de la función
-- Parámetros de entrada
-- Retorno esperado
-- Código relevante
+### Sección 2: Análisis Smali Detallado
 
-### Sección 3: Parámetros Extraídos
-Tabla de todos los parámetros identificados y su ubicación en el código
+Para cada función relevante:
+- Nombre y ubicación en código
+- Parámetros de entrada/salida
+- Propósito y funcionalidad
+- Código smali relevante
+- Notas técnicas
 
-### Sección 4: Guía de Uso del Script
-Ejemplos de ejecución paso a paso
+### Sección 3: Procesos de Autenticación
 
-### Sección 5: Troubleshooting
-Errores comunes y soluciones
+- Flujo de generación de tokens
+- Validación de credenciales
+- Manejo de sesiones
+- Errores y recuperación
+- Ejemplos de implementación
+
+### Sección 4: Procesos de Cifrado
+
+- Algoritmos identificados
+- Derivación de llaves
+- Vectores de inicialización
+- HMAC y firmas digitales
+- Validación de integridad
+
+### Sección 5: Estructura de Manifiestos
+
+- Formato XML parseado
+- Campos de versión
+- URLs de descarga
+- Checksums y validación
+- Ejemplos de manifiestos
+
+### Sección 6: Parámetros Extraídos
+
+Tabla completa de todos los parámetros identificados:
+- Nombre del parámetro
+- Tipo de dato
+- Ubicación en código smali
+- Valores de ejemplo
+- Notas de validación
+
+### Sección 7: Guía de Uso
+
+- Instalación de dependencias
+- Creación de config.cfg
+- Uso de argumentos CLI
+- Ejemplos de ejecución
+- Interpretación de logs
+
+### Sección 8: Troubleshooting
+
+- Errores comunes y soluciones
+- Validación de parámetros
+- Recuperación de fallos
+- Logs de debugging
 
 ---
 
-## Configuración Adicional
+## Configuración Técnica
 
-Para integrar completamente este agente:
+### Requisitos Identificados
 
-1. **Copilot CLI**: Instala la última versión
-   ```bash
-   gh extension upgrade copilot || gh extension install github/gh-copilot
-   ```
+El agente debe:
 
-2. **Permisos**: Asegúrate de tener acceso al repositorio
-   ```bash
-   gh auth login
-   ```
+1. Escanear recursivamente `classes2_smali/`
+2. Parsear opcodes smali relevantes
+3. Identificar llamadas a métodos críticos
+4. Extraer constantes de strings
+5. Mapear flujos de datos
+6. Documentar con precisión técnica
 
-3. **Ejecución Local**: Usa Copilot CLI para testing
-   ```bash
-   gh copilot agent -a "Samsung OTA Firmware Analyzer" "tu-consulta"
-   ```
+### Documentación en ANALYSIS_REPORT.md
+
+Para cada descubrimiento incluir:
+- Referencia exacta en código smali
+- Contexto de uso
+- Implicaciones técnicas
+- Ejemplos de implementación
+- Validaciones recomendadas
+
+### Validación de Información
+
+El script debe validar:
+- Formato IMEI (15 dígitos, checksum Luhn)
+- Formato CSC (código de región válido)
+- Formato Serial (alfanumérico, longitud correcta)
+- Formato Model (patrón SM-XXXX)
+- Disponibilidad de conexión de red
 
 ---
 
-## Notas Técnicas
+## Ciclo de Vida del Agente
+
+### Primera Ejecución
+
+1. Agente analiza `classes2_smali`
+2. Genera documentación completa en ANALYSIS_REPORT.md
+3. Crea script modular con todas las funcionalidades
+4. Script puede ejecutarse inmediatamente con config o CLI args
+
+### Ejecuciones Posteriores
+
+1. Script se invoca con diferentes configuraciones
+2. Puede reutilizar análisis existentes
+3. Permite múltiples descargas de distintos dispositivos
+4. Mantiene histórico de descargas
+
+### Regeneración del Agente
+
+```bash
+gh copilot agent -a "Samsung OTA Firmware Analyzer" \
+  "Regenera análisis completo leyendo ANALYSIS_REPORT.md previamente"
+```
+
+---
+
+## Notas Importantes
 
 - El análisis smali es exhaustivo y busca en todas las clases
-- El script generado es modular y reutilizable
-- Los parámetros se extraen dinámicamente del código
-- La documentación se actualiza automáticamente
-- Soporta múltiples regiones y variantes de dispositivos
+- Los procesos de autenticación y cifrado se reverse-engineered completamente
+- La descarga de manifiestos permite selección flexible
+- Los argumentos CLI proporcionan máxima flexibilidad
+- El archivo config.cfg centraliza configuraciones complejas
+- El logging registra cada paso para debugging y auditoría
+- La documentación es esencial para mantenimiento futuro
 
 ---
 
-**Última actualización**: Noviembre 15, 2025
+**Configuración**: `.github/agents/my-agent.agent.md`
 **Repositorio**: https://github.com/EduardoA3677/fota
-**Ruta del agente**: `.github/agents/my-agent.agent.md`
+**Última actualización**: Noviembre 15, 2025
