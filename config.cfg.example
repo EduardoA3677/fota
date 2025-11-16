@@ -1,0 +1,37 @@
+[device]
+# Device identification parameters
+# Required for firmware download authentication
+imei = 123456789012345
+csc = MXO
+serial_number = ABC123DEF456
+model = SM-G950F
+region = MX
+firmware_version = G950FXXU6CTI4
+
+[server]
+# Firmware server configuration
+# Based on smali analysis: com/idm/fotaagent/database/sqlite/database/polling/PollingInfoDao.smali:420
+firmware_url = https://fota-cloud-dn.ospserver.net/firmware/
+manifest_url_prod = https://fota-cloud-dn.ospserver.net/firmware/version.xml
+manifest_url_test = https://fota-cloud-dn.ospserver.net/firmware/version.test.xml
+primary_manifest = prod
+
+[authentication]
+# Authentication configuration
+# Based on smali analysis of authentication methods
+auth_method = timestamp_based
+encryption_type = aes256_base64
+
+[download]
+# Download configuration
+output_directory = ./downloads
+timeout_seconds = 300
+verify_checksums = true
+max_retries = 3
+chunk_size = 8192
+resume_downloads = true
+
+[logging]
+# Logging configuration
+log_file = fota_downloader.log
+log_level = INFO
