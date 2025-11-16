@@ -1,663 +1,381 @@
 #!/usr/bin/env python3
 """
-Samsung OTA Firmware Downloader
-Auto-generated from smali analysis of Samsung FOTA agent
+Samsung FOTA Advanced Downloader - Main Application
+Implementación completa basada en análisis profundo del código smali
 
-Features:
-- Multiple configuration methods (config file, CLI args, interactive)
-- Manifest download and version selection
-- Authentication and encryption
-- Progress tracking and resume support
-- Checksum validation
+Este script implementa el flujo completo de descarga OTA:
+1. Registro del dispositivo con OAuth 1.0 + HMAC-SHA1
+2. Verificación de actualizaciones disponibles
+3. Descarga del firmware
+4. Validación de checksum
+
+Basado en análisis de:
+- com/idm/fotaagent/restapi/restclient/
+- com/idm/fotaagent/restapi/request/
+- com/idm/fotaagent/database/
 """
 
 import argparse
-import base64
 import configparser
-import hashlib
-import json
 import logging
 import os
 import sys
-import time
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from urllib.parse import urljoin
+from typing import Dict, Optional
 
-try:
-    import requests
-    from tqdm import tqdm
-except ImportError:
-    print("Required packages not installed. Installing...")
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests", "tqdm"])
-    import requests
-    from tqdm import tqdm
-
-try:
-    from Crypto.Cipher import AES
-    from Crypto.Random import get_random_bytes
-    from Crypto.Util.Padding import pad, unpad
-except ImportError:
-    print("PyCryptodome not installed. Installing...")
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pycryptodome"])
-    from Crypto.Cipher import AES
-    from Crypto.Random import get_random_bytes
-    from Crypto.Util.Padding import pad, unpad
+# Importar módulos propios
+from fota_core import DeviceInfoBuilder, OAuth1Authenticator
+from fota_client import FOTAWorkflow, FOTARestClient
 
 
-# Configure logging
+# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
-logger = logging.getLogger('FOTADownloader')
+logger = logging.getLogger(__name__)
 
 
-class AESCryptImpl:
-    """
-    AES encryption implementation matching Samsung's AESCrypt
-    Based on: com/samsung/android/fotaagent/common/cipher/AESCrypt.smali
-    """
-    
-    def __init__(self, key: bytes = None):
-        """Initialize with encryption key"""
-        self.key = key or self._generate_default_key()
-        self.cipher_mode = AES.MODE_CBC
-    
-    def _generate_default_key(self) -> bytes:
-        """Generate a default key (should be device-specific in production)"""
-        # In production, derive from device ID
-        return hashlib.sha256(b"SAMSUNG_FOTA_KEY").digest()  # AES-256
-    
-    def encrypt(self, plaintext: str) -> str:
-        """
-        Encrypts string and returns Base64-encoded result
-        Matches: AESCrypt.encrypt() in smali
-        """
-        if not plaintext:
-            return ""
-        
-        try:
-            iv = get_random_bytes(16)
-            cipher = AES.new(self.key, self.cipher_mode, iv)
-            
-            padded = pad(plaintext.encode('utf-8'), AES.block_size)
-            encrypted = cipher.encrypt(padded)
-            
-            result = iv + encrypted
-            return base64.b64encode(result).decode('utf-8')
-        
-        except Exception as e:
-            logger.error(f"Encryption error: {e}")
-            return ""
-    
-    def decrypt(self, encrypted_str: str) -> str:
-        """
-        Decrypts Base64-encoded string
-        Matches: AESCrypt.decrypt() in smali
-        """
-        if not encrypted_str:
-            return ""
-        
-        try:
-            encrypted_data = base64.b64decode(encrypted_str)
-            iv = encrypted_data[:16]
-            ciphertext = encrypted_data[16:]
-            
-            cipher = AES.new(self.key, self.cipher_mode, iv)
-            decrypted = cipher.decrypt(ciphertext)
-            
-            return unpad(decrypted, AES.block_size).decode('utf-8')
-        
-        except Exception as e:
-            logger.error(f"Decryption error: {e}")
-            return ""
-
-
-class DeviceValidator:
-    """Validates device parameters"""
+class ConfigLoader:
+    """Cargador de configuración con múltiples fuentes"""
     
     @staticmethod
-    def validate_imei(imei: str) -> bool:
-        """Validates IMEI using Luhn algorithm"""
-        if not imei or not imei.isdigit() or len(imei) != 15:
-            return False
-        
-        # Luhn algorithm
-        total = 0
-        for i, digit in enumerate(reversed(imei)):
-            n = int(digit)
-            if i % 2 == 1:
-                n *= 2
-                if n > 9:
-                    n -= 9
-            total += n
-        
-        return total % 10 == 0
-    
-    @staticmethod
-    def validate_csc(csc: str) -> bool:
-        """Validates CSC format (3-character code)"""
-        return bool(csc and len(csc) == 3 and csc.isalpha())
-    
-    @staticmethod
-    def validate_serial(serial: str) -> bool:
-        """Validates serial number format"""
-        return bool(serial and len(serial) >= 8 and serial.isalnum())
-    
-    @staticmethod
-    def validate_model(model: str) -> bool:
-        """Validates Samsung model format"""
-        return bool(model and model.startswith('SM-') and len(model) >= 7)
-
-
-class ManifestDownloader:
-    """Downloads and parses firmware manifests"""
-    
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Samsung-FOTA-Agent/1.0'
-        })
-    
-    def download_manifest(self, manifest_type: str = 'prod') -> Optional[str]:
+    def load_from_file(config_path: str) -> Dict:
         """
-        Downloads firmware manifest
+        Carga configuración desde archivo INI
         
         Args:
-            manifest_type: 'prod' or 'test'
-        
-        Returns:
-            XML content as string or None
-        """
-        manifest_file = 'version.xml' if manifest_type == 'prod' else 'version.test.xml'
-        url = urljoin(self.base_url, manifest_file)
-        
-        logger.info(f"Downloading manifest from {url}")
-        
-        try:
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            return response.text
-        
-        except requests.RequestException as e:
-            logger.error(f"Failed to download manifest: {e}")
-            return None
-    
-    def parse_manifest(self, xml_content: str) -> List[Dict]:
-        """
-        Parses firmware manifest XML
-        
-        Returns:
-            List of firmware version dictionaries
-        """
-        versions = []
-        
-        try:
-            root = ET.fromstring(xml_content)
+            config_path: Ruta al archivo de configuración
             
-            for version_elem in root.findall('.//version'):
-                version_info = {
-                    'name': self._get_text(version_elem, 'name'),
-                    'fw_ver': self._get_text(version_elem, 'fw_ver'),
-                    'build_date': self._get_text(version_elem, 'build_date'),
-                    'size': int(self._get_text(version_elem, 'size', '0')),
-                    'crc': self._get_text(version_elem, 'crc'),
-                    'url': self._get_text(version_elem, 'binary/url'),
-                    'md5': self._get_text(version_elem, 'binary/md5'),
-                    'description': self._get_text(version_elem, 'description')
-                }
-                versions.append(version_info)
+        Returns:
+            Dict con la configuración
+        """
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f"Config file not found: {config_path}")
         
-        except ET.ParseError as e:
-            logger.error(f"XML parse error: {e}")
+        config = configparser.ConfigParser()
+        config.read(config_path)
         
-        return versions
+        result = {}
+        for section in config.sections():
+            result[section] = {}
+            for key, value in config[section].items():
+                # Convertir tipos
+                if value.lower() in ('true', 'yes', '1'):
+                    result[section][key] = True
+                elif value.lower() in ('false', 'no', '0'):
+                    result[section][key] = False
+                elif value.isdigit():
+                    result[section][key] = int(value)
+                else:
+                    result[section][key] = value
+        
+        return result
     
     @staticmethod
-    def _get_text(element, path: str, default: str = '') -> str:
-        """Safely extracts text from XML element"""
-        try:
-            elem = element.find(path)
-            return elem.text if elem is not None and elem.text else default
-        except:
-            return default
-
-
-class FOTADownloader:
-    """Main FOTA firmware downloader"""
-    
-    def __init__(self, config: Dict):
-        self.config = config
-        self.device_info = config.get('device', {})
-        self.server_config = config.get('server', {})
-        self.download_config = config.get('download', {})
+    def validate_device_config(config: Dict) -> tuple[bool, list]:
+        """
+        Valida la configuración del dispositivo
         
-        self.aes_crypt = AESCryptImpl()
-        self.validator = DeviceValidator()
-        self.session = requests.Session()
-        
-        # Setup session headers
-        self.session.headers.update({
-            'User-Agent': 'Samsung-FOTA-Downloader/1.0',
-            'Accept': '*/*'
-        })
-    
-    def validate_device_info(self) -> Tuple[bool, List[str]]:
-        """Validates all device parameters"""
+        Args:
+            config: Dict de configuración
+            
+        Returns:
+            Tupla (is_valid, errors)
+        """
         errors = []
+        device = config.get('device', {})
         
-        imei = self.device_info.get('imei', '')
-        if not self.validator.validate_imei(imei):
-            errors.append(f"Invalid IMEI format: {imei}")
+        # Validar IMEI
+        imei = device.get('imei', '')
+        if not imei or not imei.isdigit() or len(imei) != 15:
+            errors.append("Invalid IMEI: must be 15 digits")
         
-        csc = self.device_info.get('csc', '')
-        if not self.validator.validate_csc(csc):
-            errors.append(f"Invalid CSC code: {csc}")
+        # Validar serial
+        serial = device.get('serial_number', '')
+        if not serial or len(serial) < 6:
+            errors.append("Invalid serial number: must be at least 6 characters")
         
-        serial = self.device_info.get('serial_number', '')
-        if not self.validator.validate_serial(serial):
-            errors.append(f"Invalid serial number: {serial}")
-        
-        model = self.device_info.get('model', '')
-        if not self.validator.validate_model(model):
-            errors.append(f"Invalid model format: {model}")
+        # Validar modelo
+        model = device.get('model', '')
+        if not model or not model.startswith('SM-'):
+            errors.append("Invalid model: must start with SM-")
         
         return len(errors) == 0, errors
     
-    def display_manifests_menu(self, manifests: Dict[str, List[Dict]]) -> Optional[str]:
-        """Displays available manifests and lets user select one"""
-        print("\n" + "╔" + "═" * 50 + "╗")
-        print("║" + " " * 15 + "MANIFIESTOS DISPONIBLES" + " " * 12 + "║")
-        print("╠" + "═" * 50 + "╣")
+    @staticmethod
+    def merge_configs(file_config: Dict, cli_args: argparse.Namespace) -> Dict:
+        """
+        Combina configuración de archivo y argumentos CLI
+        Los argumentos CLI tienen prioridad
         
-        options = []
-        idx = 1
-        
-        if manifests.get('prod'):
-            print(f"║ [{idx}] version.xml (Producción)" + " " * 17 + "║")
-            print(f"║     Versiones: {len(manifests['prod']):<34}║")
-            if manifests['prod']:
-                latest = manifests['prod'][0]['fw_ver']
-                print(f"║     Más reciente: {latest:<30}║")
-            print("║" + " " * 50 + "║")
-            options.append('prod')
-            idx += 1
-        
-        if manifests.get('test'):
-            print(f"║ [{idx}] version.test.xml (Testing)" + " " * 15 + "║")
-            print(f"║     Versiones: {len(manifests['test']):<34}║")
-            if manifests['test']:
-                latest = manifests['test'][0]['fw_ver']
-                print(f"║     Más reciente: {latest} (beta)" + " " * (19 - len(latest)) + "║")
-            options.append('test')
-        
-        print("╚" + "═" * 50 + "╝")
-        
-        if not options:
-            return None
-        
-        while True:
-            try:
-                choice = input("\nSelecciona manifiesto [1-{}]: ".format(len(options)))
-                choice_idx = int(choice) - 1
-                if 0 <= choice_idx < len(options):
-                    return options[choice_idx]
-            except (ValueError, KeyboardInterrupt):
-                return None
-    
-    def display_versions_menu(self, versions: List[Dict]) -> Optional[Dict]:
-        """Displays available firmware versions and lets user select one"""
-        print("\n" + "╔" + "═" * 50 + "╗")
-        print("║" + " " * 15 + "VERSIONES DISPONIBLES" + " " * 14 + "║")
-        print("╠" + "═" * 50 + "╣")
-        
-        for idx, version in enumerate(versions[:10], 1):  # Show first 10
-            print(f"║ [{idx}] {version['fw_ver']:<43}║")
-            print(f"║     Build: {version['name']:<37}║")
+        Args:
+            file_config: Configuración del archivo
+            cli_args: Argumentos de línea de comandos
             
-            size_gb = version['size'] / (1024**3) if version['size'] > 0 else 0
-            size_str = f"{size_gb:.2f} GB" if size_gb > 0 else "Unknown"
-            print(f"║     Tamaño: {size_str:<37}║")
-            
-            if version['build_date']:
-                date = version['build_date']
-                if len(date) == 8:  # Format: YYYYMMDD
-                    date_formatted = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
-                    print(f"║     Fecha: {date_formatted:<38}║")
-            
-            print("║" + " " * 50 + "║")
+        Returns:
+            Dict con configuración combinada
+        """
+        result = dict(file_config)
         
-        print("╚" + "═" * 50 + "╝")
+        # Inicializar secciones si no existen
+        if 'device' not in result:
+            result['device'] = {}
+        if 'server' not in result:
+            result['server'] = {}
+        if 'download' not in result:
+            result['download'] = {}
         
-        while True:
-            try:
-                choice = input(f"\nSelecciona versión [1-{len(versions)}] (0 para cancelar): ")
-                choice_idx = int(choice) - 1
-                
-                if choice == '0':
-                    return None
-                
-                if 0 <= choice_idx < len(versions):
-                    return versions[choice_idx]
-            except (ValueError, KeyboardInterrupt):
-                return None
-    
-    def download_firmware(self, version_info: Dict) -> bool:
-        """Downloads firmware file with progress bar"""
-        url = urljoin(self.server_config.get('firmware_url', ''), version_info['url'])
-        output_dir = self.download_config.get('output_directory', './downloads')
+        # Sobrescribir con args CLI si están presentes
+        if cli_args.imei:
+            result['device']['imei'] = cli_args.imei
+        if cli_args.serial:
+            result['device']['serial_number'] = cli_args.serial
+        if cli_args.model:
+            result['device']['model'] = cli_args.model
+        if cli_args.csc:
+            result['device']['csc'] = cli_args.csc
+        if cli_args.firmware:
+            result['device']['firmware_version'] = cli_args.firmware
+        if cli_args.output:
+            result['download']['output_directory'] = cli_args.output
+        if cli_args.staging:
+            result['server']['use_staging'] = True
+        if cli_args.url:
+            result['server']['base_url'] = cli_args.url
         
-        # Create output directory
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        
-        filename = os.path.basename(version_info['url'])
-        output_path = os.path.join(output_dir, filename)
-        
-        logger.info(f"Downloading {filename} from {url}")
-        logger.info(f"Output: {output_path}")
-        
-        try:
-            # Check if file exists and resume is enabled
-            resume_header = {}
-            initial_pos = 0
-            
-            if os.path.exists(output_path) and self.download_config.get('resume_downloads', True):
-                initial_pos = os.path.getsize(output_path)
-                resume_header = {'Range': f'bytes={initial_pos}-'}
-                logger.info(f"Resuming download from byte {initial_pos}")
-            
-            response = self.session.get(
-                url,
-                headers=resume_header,
-                stream=True,
-                timeout=self.download_config.get('timeout_seconds', 300)
-            )
-            
-            if response.status_code not in [200, 206]:
-                logger.error(f"HTTP {response.status_code}: {response.reason}")
-                return False
-            
-            total_size = int(response.headers.get('content-length', 0))
-            if response.status_code == 206:
-                total_size += initial_pos
-            
-            mode = 'ab' if response.status_code == 206 else 'wb'
-            
-            chunk_size = self.download_config.get('chunk_size', 8192)
-            
-            with open(output_path, mode) as f:
-                with tqdm(total=total_size, initial=initial_pos, unit='B', unit_scale=True, desc=filename) as pbar:
-                    for chunk in response.iter_content(chunk_size=chunk_size):
-                        if chunk:
-                            f.write(chunk)
-                            pbar.update(len(chunk))
-            
-            logger.info(f"Download complete: {output_path}")
-            
-            # Verify checksum if enabled
-            if self.download_config.get('verify_checksums', True) and version_info.get('md5'):
-                return self.verify_checksum(output_path, version_info['md5'])
-            
-            return True
-        
-        except Exception as e:
-            logger.error(f"Download failed: {e}")
-            return False
-    
-    def verify_checksum(self, file_path: str, expected_md5: str) -> bool:
-        """Verifies file MD5 checksum"""
-        logger.info("Verifying checksum...")
-        
-        try:
-            md5_hash = hashlib.md5()
-            
-            with open(file_path, 'rb') as f:
-                for chunk in iter(lambda: f.read(4096), b''):
-                    md5_hash.update(chunk)
-            
-            calculated_md5 = md5_hash.hexdigest()
-            
-            if calculated_md5.lower() == expected_md5.lower():
-                logger.info("✓ Checksum validation passed")
-                return True
-            else:
-                logger.error(f"✗ Checksum mismatch!")
-                logger.error(f"  Expected: {expected_md5}")
-                logger.error(f"  Got:      {calculated_md5}")
-                return False
-        
-        except Exception as e:
-            logger.error(f"Checksum verification failed: {e}")
-            return False
-    
-    def run(self, manifest_type: Optional[str] = None):
-        """Main execution flow"""
-        print("\n" + "=" * 60)
-        print("  Samsung OTA Firmware Downloader")
-        print("  Based on smali analysis of FOTA agent")
-        print("=" * 60)
-        
-        # Validate device info
-        print("\n[1/6] Validando información del dispositivo...")
-        valid, errors = self.validate_device_info()
-        
-        if not valid:
-            logger.error("Device validation failed:")
-            for error in errors:
-                logger.error(f"  - {error}")
-            return False
-        
-        logger.info("✓ Device information validated")
-        logger.info(f"  IMEI:   {self.device_info['imei']}")
-        logger.info(f"  Model:  {self.device_info['model']}")
-        logger.info(f"  CSC:    {self.device_info['csc']}")
-        logger.info(f"  Serial: {self.device_info['serial_number']}")
-        
-        # Download manifests
-        print("\n[2/6] Descargando manifiestos...")
-        
-        manifest_downloader = ManifestDownloader(
-            self.server_config.get('firmware_url', 'https://fota-cloud-dn.ospserver.net/firmware/')
-        )
-        
-        manifests = {}
-        
-        # Try production manifest
-        prod_xml = manifest_downloader.download_manifest('prod')
-        if prod_xml:
-            manifests['prod'] = manifest_downloader.parse_manifest(prod_xml)
-            logger.info(f"✓ Production manifest: {len(manifests['prod'])} versions found")
-        
-        # Try test manifest
-        test_xml = manifest_downloader.download_manifest('test')
-        if test_xml:
-            manifests['test'] = manifest_downloader.parse_manifest(test_xml)
-            logger.info(f"✓ Test manifest: {len(manifests['test'])} versions found")
-        
-        if not manifests:
-            logger.error("No manifests could be downloaded")
-            return False
-        
-        # Select manifest
-        print("\n[3/6] Seleccionando manifiesto...")
-        
-        if manifest_type and manifest_type in manifests:
-            selected_manifest_type = manifest_type
-        else:
-            selected_manifest_type = self.display_manifests_menu(manifests)
-        
-        if not selected_manifest_type:
-            logger.info("No manifest selected, exiting")
-            return False
-        
-        versions = manifests[selected_manifest_type]
-        logger.info(f"Selected: {'Production' if selected_manifest_type == 'prod' else 'Test'} manifest")
-        
-        # Select version
-        print("\n[4/6] Seleccionando versión...")
-        
-        selected_version = self.display_versions_menu(versions)
-        
-        if not selected_version:
-            logger.info("No version selected, exiting")
-            return False
-        
-        logger.info(f"Selected version: {selected_version['fw_ver']}")
-        
-        # Authentication (placeholder - would implement full auth here)
-        print("\n[5/6] Autenticación...")
-        logger.info("✓ Authentication successful (simulated)")
-        
-        # Download firmware
-        print("\n[6/6] Descargando firmware...")
-        
-        success = self.download_firmware(selected_version)
-        
-        if success:
-            print("\n" + "=" * 60)
-            print("  ✓ Descarga completada exitosamente!")
-            print("=" * 60)
-            return True
-        else:
-            print("\n" + "=" * 60)
-            print("  ✗ Descarga fallida")
-            print("=" * 60)
-            return False
+        return result
 
 
-def load_config_file(config_path: str) -> Dict:
-    """Loads configuration from INI file"""
-    config = configparser.ConfigParser()
-    config.read(config_path)
+def interactive_config() -> Dict:
+    """
+    Solicita configuración de forma interactiva
     
-    result = {}
-    for section in config.sections():
-        result[section] = dict(config[section])
-        
-        # Convert boolean strings
-        for key, value in result[section].items():
-            if value.lower() in ('true', 'yes', '1'):
-                result[section][key] = True
-            elif value.lower() in ('false', 'no', '0'):
-                result[section][key] = False
-            elif value.isdigit():
-                result[section][key] = int(value)
+    Returns:
+        Dict con la configuración
+    """
+    print("\n" + "=" * 70)
+    print("  Samsung FOTA Downloader - Interactive Configuration")
+    print("=" * 70)
+    print()
     
-    return result
-
-
-def interactive_input() -> Dict:
-    """Gets device information interactively"""
-    print("\n" + "=" * 60)
-    print("  Configuración Interactiva")
-    print("=" * 60)
-    
-    device = {}
-    
-    device['imei'] = input("\nIMEI (15 dígitos): ").strip()
-    device['csc'] = input("CSC (3 letras, ej: MXO): ").strip().upper()
-    device['serial_number'] = input("Número de Serie: ").strip()
-    device['model'] = input("Modelo (ej: SM-G950F): ").strip().upper()
-    device['region'] = input("Región (opcional): ").strip().upper()
-    
-    return {
-        'device': device,
-        'server': {
-            'firmware_url': 'https://fota-cloud-dn.ospserver.net/firmware/'
-        },
-        'download': {
-            'output_directory': './downloads',
-            'timeout_seconds': 300,
-            'verify_checksums': True,
-            'max_retries': 3,
-            'chunk_size': 8192,
-            'resume_downloads': True
-        }
+    config = {
+        'device': {},
+        'server': {},
+        'download': {}
     }
+    
+    print("Device Information:")
+    print("-" * 70)
+    
+    while True:
+        imei = input("IMEI (15 digits): ").strip()
+        if imei.isdigit() and len(imei) == 15:
+            config['device']['imei'] = imei
+            break
+        print("  ✗ Invalid IMEI. Must be exactly 15 digits.")
+    
+    while True:
+        serial = input("Serial Number (min 6 chars): ").strip()
+        if len(serial) >= 6:
+            config['device']['serial_number'] = serial
+            break
+        print("  ✗ Invalid serial. Must be at least 6 characters.")
+    
+    while True:
+        model = input("Device Model (e.g., SM-G950F): ").strip().upper()
+        if model.startswith('SM-'):
+            config['device']['model'] = model
+            break
+        print("  ✗ Invalid model. Must start with 'SM-'.")
+    
+    csc = input("CSC Code (3 letters, optional): ").strip().upper()
+    config['device']['csc'] = csc if len(csc) == 3 else ''
+    
+    firmware = input("Current Firmware Version (optional): ").strip()
+    config['device']['firmware_version'] = firmware if firmware else '0'
+    
+    print()
+    print("Server Configuration:")
+    print("-" * 70)
+    
+    use_staging = input("Use staging server? (y/N): ").strip().lower()
+    config['server']['use_staging'] = use_staging == 'y'
+    
+    print()
+    print("Download Configuration:")
+    print("-" * 70)
+    
+    output = input("Output directory (default: ./downloads): ").strip()
+    config['download']['output_directory'] = output if output else './downloads'
+    
+    return config
+
+
+def print_config_summary(config: Dict):
+    """
+    Imprime resumen de la configuración
+    
+    Args:
+        config: Dict de configuración
+    """
+    print("\n" + "=" * 70)
+    print("  Configuration Summary")
+    print("=" * 70)
+    
+    device = config.get('device', {})
+    server = config.get('server', {})
+    download = config.get('download', {})
+    
+    print("\nDevice:")
+    print(f"  IMEI:     {device.get('imei', 'N/A')}")
+    print(f"  Model:    {device.get('model', 'N/A')}")
+    print(f"  Serial:   {device.get('serial_number', 'N/A')}")
+    print(f"  CSC:      {device.get('csc', 'N/A')}")
+    print(f"  Firmware: {device.get('firmware_version', 'N/A')}")
+    
+    print("\nServer:")
+    base_url = server.get('base_url', FOTARestClient.DEFAULT_BASE_URL)
+    if server.get('use_staging'):
+        base_url = FOTARestClient.STAGING_URL
+    print(f"  Base URL: {base_url}")
+    
+    print("\nDownload:")
+    print(f"  Output:   {download.get('output_directory', './downloads')}")
+    
+    print("=" * 70)
 
 
 def main():
     """Main entry point"""
+    
     parser = argparse.ArgumentParser(
-        description='Samsung OTA Firmware Downloader',
-        epilog='Based on smali analysis of Samsung FOTA agent'
+        description='Samsung FOTA Advanced Downloader',
+        epilog='Based on deep smali analysis with OAuth 1.0 and HMAC-SHA1',
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
-    parser.add_argument('--config', type=str, help='Path to config.cfg file')
-    parser.add_argument('--imei', type=str, help='Device IMEI (15 digits)')
-    parser.add_argument('--csc', type=str, help='CSC code (3 characters)')
-    parser.add_argument('--serial', type=str, help='Serial number')
-    parser.add_argument('--model', type=str, help='Device model (e.g., SM-G950F)')
-    parser.add_argument('--manifest', type=str, choices=['prod', 'test'], help='Select manifest type')
-    parser.add_argument('--output', type=str, help='Output directory for downloads')
+    # Config file
+    parser.add_argument(
+        '--config',
+        type=str,
+        help='Path to config.cfg file'
+    )
+    
+    # Device parameters
+    device_group = parser.add_argument_group('Device Configuration')
+    device_group.add_argument('--imei', type=str, help='Device IMEI (15 digits)')
+    device_group.add_argument('--serial', type=str, help='Serial number')
+    device_group.add_argument('--model', type=str, help='Device model (e.g., SM-G950F)')
+    device_group.add_argument('--csc', type=str, help='CSC code (3 letters)')
+    device_group.add_argument('--firmware', type=str, help='Current firmware version')
+    
+    # Server configuration
+    server_group = parser.add_argument_group('Server Configuration')
+    server_group.add_argument('--staging', action='store_true', help='Use staging server')
+    server_group.add_argument('--url', type=str, help='Custom base URL')
+    
+    # Download configuration
+    download_group = parser.add_argument_group('Download Configuration')
+    download_group.add_argument('--output', type=str, help='Output directory')
+    
+    # Other options
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose logging')
+    parser.add_argument('--test-auth', action='store_true', help='Test OAuth authentication only')
     
     args = parser.parse_args()
     
-    # Set log level
+    # Configurar nivel de logging
     if args.verbose:
-        logger.setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
     
-    # Load configuration
+    # Test OAuth si se solicita
+    if args.test_auth:
+        print("\n" + "=" * 70)
+        print("  Testing OAuth 1.0 Authentication")
+        print("=" * 70)
+        print()
+        
+        print("Registration OAuth:")
+        auth = OAuth1Authenticator.for_registration()
+        print(f"  Consumer Key:    {auth.consumer_key}")
+        print(f"  Consumer Secret: {auth.consumer_secret[:8]}***")
+        
+        test_url = "https://fota-cloud-dn.ospserver.net/firmware/test.do"
+        auth_header = auth.create_auth_header("POST", test_url)
+        print(f"  Auth Header:     {auth_header[:60]}...")
+        print()
+        
+        print("Time Sync OAuth:")
+        auth = OAuth1Authenticator.for_time_sync()
+        print(f"  Consumer Key:    {auth.consumer_key}")
+        print(f"  Consumer Secret: {auth.consumer_secret[:8]}***")
+        
+        auth_header = auth.create_auth_header("POST", test_url)
+        print(f"  Auth Header:     {auth_header[:60]}...")
+        print()
+        
+        print("✓ OAuth test completed")
+        return 0
+    
+    # Cargar configuración
     config = {}
     
-    # Priority 1: Load from config file
-    if args.config:
-        if os.path.exists(args.config):
-            logger.info(f"Loading configuration from {args.config}")
-            config = load_config_file(args.config)
-        else:
-            logger.error(f"Config file not found: {args.config}")
-            return 1
-    
-    # Priority 2: Override with CLI arguments
-    if args.imei or args.csc or args.serial or args.model:
-        if 'device' not in config:
-            config['device'] = {}
-        
-        if args.imei:
-            config['device']['imei'] = args.imei
-        if args.csc:
-            config['device']['csc'] = args.csc
-        if args.serial:
-            config['device']['serial_number'] = args.serial
-        if args.model:
-            config['device']['model'] = args.model
-    
-    if args.output:
-        if 'download' not in config:
-            config['download'] = {}
-        config['download']['output_directory'] = args.output
-    
-    # Priority 3: Interactive input if no config provided
-    if not config or 'device' not in config:
-        config = interactive_input()
-    
-    # Ensure required sections exist
-    if 'server' not in config:
-        config['server'] = {
-            'firmware_url': 'https://fota-cloud-dn.ospserver.net/firmware/'
-        }
-    
-    if 'download' not in config:
-        config['download'] = {
-            'output_directory': './downloads',
-            'timeout_seconds': 300,
-            'verify_checksums': True,
-            'max_retries': 3,
-            'chunk_size': 8192,
-            'resume_downloads': True
-        }
-    
-    # Create downloader and run
     try:
-        downloader = FOTADownloader(config)
-        success = downloader.run(manifest_type=args.manifest)
+        # Prioridad 1: Archivo de configuración
+        if args.config:
+            logger.info(f"Loading configuration from {args.config}")
+            config = ConfigLoader.load_from_file(args.config)
+        
+        # Prioridad 2: Combinar con argumentos CLI
+        if any([args.imei, args.serial, args.model, args.csc, args.firmware, 
+                args.output, args.staging, args.url]):
+            config = ConfigLoader.merge_configs(config, args)
+        
+        # Prioridad 3: Modo interactivo si no hay configuración
+        if not config or 'device' not in config or not config['device']:
+            logger.info("No configuration provided, entering interactive mode")
+            config = interactive_config()
+        
+        # Validar configuración
+        is_valid, errors = ConfigLoader.validate_device_config(config)
+        if not is_valid:
+            logger.error("Invalid configuration:")
+            for error in errors:
+                logger.error(f"  - {error}")
+            return 1
+        
+        # Mostrar resumen
+        print_config_summary(config)
+        
+        # Confirmar antes de proceder
+        confirm = input("\nProceed with download? (Y/n): ").strip().lower()
+        if confirm == 'n':
+            print("Operation cancelled")
+            return 0
+        
+        # Crear workflow
+        device = config['device']
+        server = config.get('server', {})
+        download = config.get('download', {})
+        
+        workflow = FOTAWorkflow(
+            imei=device['imei'],
+            serial=device['serial_number'],
+            model=device['model'],
+            csc=device.get('csc', ''),
+            firmware_version=device.get('firmware_version', '0'),
+            base_url=server.get('base_url'),
+            use_staging=server.get('use_staging', False)
+        )
+        
+        # Ejecutar workflow
+        output_dir = download.get('output_directory', './downloads')
+        success = workflow.execute(output_dir)
+        
         return 0 if success else 1
     
     except KeyboardInterrupt:
