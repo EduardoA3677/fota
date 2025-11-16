@@ -1,0 +1,37 @@
+.class final enum Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$MetadataDownloadState$3;
+.super Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$MetadataDownloadState;
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingClass;
+    value = Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$MetadataDownloadState;
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x4011
+    name = null
+.end annotation
+
+
+# direct methods
+.method public constructor <init>(Ljava/lang/String;I)V
+    .registers 4
+
+    const/4 v0, 0x0
+
+    invoke-direct {p0, p1, p2, v0}, Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$MetadataDownloadState;-><init>(Ljava/lang/String;ILcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$1;)V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public throwIfNeeded()V
+    .registers 2
+
+    new-instance v0, Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$DownloadSuspendedException;
+
+    invoke-direct {v0}, Lcom/idm/fotaagent/abupdate/abenabler/utils/metadata/MetadataDownloader$DownloadSuspendedException;-><init>()V
+
+    throw v0
+.end method

@@ -1,0 +1,38 @@
+.class public abstract LO/q;
+.super Ljava/lang/Object;
+
+
+# direct methods
+.method public static a(Landroid/text/PrecomputedText;)Ljava/lang/CharSequence;
+    .registers 1
+
+    return-object p0
+.end method
+
+.method public static b(Landroid/icu/text/DecimalFormatSymbols;)[Ljava/lang/String;
+    .registers 2
+
+    invoke-virtual {p0}, Landroid/icu/text/DecimalFormatSymbols;->getDigitStrings()[Ljava/lang/String;
+
+    move-result-object v0
+
+    return-object v0
+.end method
+
+.method public static c(Landroid/widget/TextView;)Landroid/text/PrecomputedText$Params;
+    .registers 2
+
+    invoke-virtual {p0}, Landroid/widget/TextView;->getTextMetricsParams()Landroid/text/PrecomputedText$Params;
+
+    move-result-object v0
+
+    return-object v0
+.end method
+
+.method public static d(Landroid/widget/TextView;I)V
+    .registers 2
+
+    invoke-virtual {p0, p1}, Landroid/widget/TextView;->setFirstBaselineToTopHeight(I)V
+
+    return-void
+.end method

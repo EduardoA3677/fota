@@ -1,0 +1,1240 @@
+.class interface abstract Lcom/idm/core/security/IDMSecurityInterface;
+.super Ljava/lang/Object;
+
+
+# static fields
+.field public static final FP:[B
+
+.field public static final IDM_CRED_TYPE_BASIC:I = 0x0
+
+.field public static final IDM_CRED_TYPE_BASIC_STR:Ljava/lang/String; = "BASIC"
+
+.field public static final IDM_CRED_TYPE_DIGEST_STR:Ljava/lang/String; = "DIGEST"
+
+.field public static final IDM_CRED_TYPE_HMAC:I = 0x2
+
+.field public static final IDM_CRED_TYPE_HMAC_STR:Ljava/lang/String; = "HMAC"
+
+.field public static final IDM_CRED_TYPE_MD5:I = 0x1
+
+.field public static final IDM_CRED_TYPE_MD5_STR:Ljava/lang/String; = "MD5"
+
+.field public static final IDM_CRED_TYPE_NONE:I = -0x1
+
+.field public static final IDM_CRED_TYPE_NONE_STR:Ljava/lang/String; = "NONE"
+
+.field public static final IDM_SHA_KEY_PAD_LEN:I = 0x40
+
+.field public static final IDM_SHA_KEY_PAD_LEN_:I = 0x40
+
+.field public static final IP:[B
+
+.field public static final MAX_CRYPT_BITS_SIZE:I = 0x40
+
+.field public static final MAX_ENCRYPT_SIZE:I = 0x10
+
+.field public static final P:[B
+
+.field public static final PC1_C:[B
+
+.field public static final PC1_D:[B
+
+.field public static final PC2_C:[B
+
+.field public static final PC2_D:[B
+
+.field public static final S:[[B
+
+.field public static final clientPwdDict:[B
+
+.field public static final e2:[B
+
+.field public static final hexTable:[C
+
+.field public static final serverPwdDict:[B
+
+.field public static final shifts:[B
+
+.field public static final szDict:[B
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .registers 10
+
+    const/16 v3, 0x1c
+
+    const/16 v2, 0x18
+
+    const/16 v1, 0x10
+
+    const/16 v9, 0xf
+
+    const/16 v8, 0x40
+
+    const/16 v0, 0x28
+
+    new-array v0, v0, [B
+
+    fill-array-data v0, :array_b2
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->szDict:[B
+
+    new-array v0, v1, [C
+
+    fill-array-data v0, :array_ca
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->hexTable:[C
+
+    new-array v0, v8, [B
+
+    fill-array-data v0, :array_de
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->IP:[B
+
+    new-array v0, v8, [B
+
+    fill-array-data v0, :array_102
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->FP:[B
+
+    new-array v0, v3, [B
+
+    fill-array-data v0, :array_126
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->PC1_C:[B
+
+    new-array v0, v3, [B
+
+    fill-array-data v0, :array_138
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->PC1_D:[B
+
+    new-array v0, v1, [B
+
+    fill-array-data v0, :array_14a
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->shifts:[B
+
+    new-array v0, v2, [B
+
+    fill-array-data v0, :array_156
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->PC2_C:[B
+
+    new-array v0, v2, [B
+
+    fill-array-data v0, :array_166
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->PC2_D:[B
+
+    const/16 v0, 0x30
+
+    new-array v0, v0, [B
+
+    fill-array-data v0, :array_176
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->e2:[B
+
+    new-array v0, v8, [B
+
+    fill-array-data v0, :array_192
+
+    new-array v1, v8, [B
+
+    fill-array-data v1, :array_1b6
+
+    new-array v2, v8, [B
+
+    fill-array-data v2, :array_1da
+
+    new-array v3, v8, [B
+
+    fill-array-data v3, :array_1fe
+
+    new-array v4, v8, [B
+
+    fill-array-data v4, :array_222
+
+    new-array v5, v8, [B
+
+    fill-array-data v5, :array_246
+
+    const/16 v6, 0x8
+
+    new-array v6, v6, [[B
+
+    const/4 v7, 0x0
+
+    aput-object v0, v6, v7
+
+    const/4 v0, 0x1
+
+    aput-object v1, v6, v0
+
+    const/4 v0, 0x2
+
+    aput-object v2, v6, v0
+
+    const/4 v0, 0x3
+
+    new-array v1, v8, [B
+
+    fill-array-data v1, :array_26a
+
+    aput-object v1, v6, v0
+
+    const/4 v0, 0x4
+
+    aput-object v3, v6, v0
+
+    const/4 v0, 0x5
+
+    aput-object v4, v6, v0
+
+    const/4 v0, 0x6
+
+    new-array v1, v8, [B
+
+    fill-array-data v1, :array_28e
+
+    aput-object v1, v6, v0
+
+    const/4 v0, 0x7
+
+    aput-object v5, v6, v0
+
+    sput-object v6, Lcom/idm/core/security/IDMSecurityInterface;->S:[[B
+
+    const/16 v0, 0x20
+
+    new-array v0, v0, [B
+
+    fill-array-data v0, :array_2b2
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->P:[B
+
+    new-array v0, v9, [B
+
+    fill-array-data v0, :array_2c6
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->clientPwdDict:[B
+
+    new-array v0, v9, [B
+
+    fill-array-data v0, :array_2d2
+
+    sput-object v0, Lcom/idm/core/security/IDMSecurityInterface;->serverPwdDict:[B
+
+    return-void
+
+    :array_b2
+    .array-data 1
+        0x1t
+        0xft
+        0x5t
+        0xbt
+        0x13t
+        0x1ct
+        0x17t
+        0x2ft
+        0x23t
+        0x2ct
+        0x2t
+        0xet
+        0x6t
+        0xat
+        0x12t
+        0xdt
+        0x16t
+        0x1at
+        0x20t
+        0x2ft
+        0x3t
+        0xdt
+        0x7t
+        0x9t
+        0x11t
+        0x1et
+        0x15t
+        0x19t
+        0x21t
+        0x2dt
+        0x4t
+        0xct
+        0x8t
+        0x3ft
+        0x10t
+        0x1ft
+        0x14t
+        0x18t
+        0x22t
+        0x2et
+    .end array-data
+
+    :array_ca
+    .array-data 2
+        0x30s
+        0x31s
+        0x32s
+        0x33s
+        0x34s
+        0x35s
+        0x36s
+        0x37s
+        0x38s
+        0x39s
+        0x61s
+        0x62s
+        0x63s
+        0x64s
+        0x65s
+        0x66s
+    .end array-data
+
+    :array_de
+    .array-data 1
+        0x3at
+        0x32t
+        0x2at
+        0x22t
+        0x1at
+        0x12t
+        0xat
+        0x2t
+        0x3ct
+        0x34t
+        0x2ct
+        0x24t
+        0x1ct
+        0x14t
+        0xct
+        0x4t
+        0x3et
+        0x36t
+        0x2et
+        0x26t
+        0x1et
+        0x16t
+        0xet
+        0x6t
+        0x40t
+        0x38t
+        0x30t
+        0x28t
+        0x20t
+        0x18t
+        0x10t
+        0x8t
+        0x39t
+        0x31t
+        0x29t
+        0x21t
+        0x19t
+        0x11t
+        0x9t
+        0x1t
+        0x3bt
+        0x33t
+        0x2bt
+        0x23t
+        0x1bt
+        0x13t
+        0xbt
+        0x3t
+        0x3dt
+        0x35t
+        0x2dt
+        0x25t
+        0x1dt
+        0x15t
+        0xdt
+        0x5t
+        0x3ft
+        0x37t
+        0x2ft
+        0x27t
+        0x1ft
+        0x17t
+        0xft
+        0x7t
+    .end array-data
+
+    :array_102
+    .array-data 1
+        0x28t
+        0x8t
+        0x30t
+        0x10t
+        0x38t
+        0x18t
+        0x40t
+        0x20t
+        0x27t
+        0x7t
+        0x2ft
+        0xft
+        0x37t
+        0x17t
+        0x3ft
+        0x1ft
+        0x26t
+        0x6t
+        0x2et
+        0xet
+        0x36t
+        0x16t
+        0x3et
+        0x1et
+        0x25t
+        0x5t
+        0x2dt
+        0xdt
+        0x35t
+        0x15t
+        0x3dt
+        0x1dt
+        0x24t
+        0x4t
+        0x2ct
+        0xct
+        0x34t
+        0x14t
+        0x3ct
+        0x1ct
+        0x23t
+        0x3t
+        0x2bt
+        0xbt
+        0x33t
+        0x13t
+        0x3bt
+        0x1bt
+        0x22t
+        0x2t
+        0x2at
+        0xat
+        0x32t
+        0x12t
+        0x3at
+        0x1at
+        0x21t
+        0x1t
+        0x29t
+        0x9t
+        0x31t
+        0x11t
+        0x39t
+        0x19t
+    .end array-data
+
+    :array_126
+    .array-data 1
+        0x39t
+        0x31t
+        0x29t
+        0x21t
+        0x19t
+        0x11t
+        0x9t
+        0x1t
+        0x3at
+        0x32t
+        0x2at
+        0x22t
+        0x1at
+        0x12t
+        0xat
+        0x2t
+        0x3bt
+        0x33t
+        0x2bt
+        0x23t
+        0x1bt
+        0x13t
+        0xbt
+        0x3t
+        0x3ct
+        0x34t
+        0x2ct
+        0x24t
+    .end array-data
+
+    :array_138
+    .array-data 1
+        0x3ft
+        0x37t
+        0x2ft
+        0x27t
+        0x1ft
+        0x17t
+        0xft
+        0x7t
+        0x3et
+        0x36t
+        0x2et
+        0x26t
+        0x1et
+        0x16t
+        0xet
+        0x6t
+        0x3dt
+        0x35t
+        0x2dt
+        0x25t
+        0x1dt
+        0x15t
+        0xdt
+        0x5t
+        0x1ct
+        0x14t
+        0xct
+        0x4t
+    .end array-data
+
+    :array_14a
+    .array-data 1
+        0x1t
+        0x1t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x1t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x2t
+        0x1t
+    .end array-data
+
+    :array_156
+    .array-data 1
+        0xet
+        0x11t
+        0xbt
+        0x18t
+        0x1t
+        0x5t
+        0x3t
+        0x1ct
+        0xft
+        0x6t
+        0x15t
+        0xat
+        0x17t
+        0x13t
+        0xct
+        0x4t
+        0x1at
+        0x8t
+        0x10t
+        0x7t
+        0x1bt
+        0x14t
+        0xdt
+        0x2t
+    .end array-data
+
+    :array_166
+    .array-data 1
+        0x29t
+        0x34t
+        0x1ft
+        0x25t
+        0x2ft
+        0x37t
+        0x1et
+        0x28t
+        0x33t
+        0x2dt
+        0x21t
+        0x30t
+        0x2ct
+        0x31t
+        0x27t
+        0x38t
+        0x22t
+        0x35t
+        0x2et
+        0x2at
+        0x32t
+        0x24t
+        0x1dt
+        0x20t
+    .end array-data
+
+    :array_176
+    .array-data 1
+        0x20t
+        0x1t
+        0x2t
+        0x3t
+        0x4t
+        0x5t
+        0x4t
+        0x5t
+        0x6t
+        0x7t
+        0x8t
+        0x9t
+        0x8t
+        0x9t
+        0xat
+        0xbt
+        0xct
+        0xdt
+        0xct
+        0xdt
+        0xet
+        0xft
+        0x10t
+        0x11t
+        0x10t
+        0x11t
+        0x12t
+        0x13t
+        0x14t
+        0x15t
+        0x14t
+        0x15t
+        0x16t
+        0x17t
+        0x18t
+        0x19t
+        0x18t
+        0x19t
+        0x1at
+        0x1bt
+        0x1ct
+        0x1dt
+        0x1ct
+        0x1dt
+        0x1et
+        0x1ft
+        0x20t
+        0x1t
+    .end array-data
+
+    :array_192
+    .array-data 1
+        0xet
+        0x4t
+        0xdt
+        0x1t
+        0x2t
+        0xft
+        0xbt
+        0x8t
+        0x3t
+        0xat
+        0x6t
+        0xct
+        0x5t
+        0x9t
+        0x0t
+        0x7t
+        0x0t
+        0xft
+        0x7t
+        0x4t
+        0xet
+        0x2t
+        0xdt
+        0x1t
+        0xat
+        0x6t
+        0xct
+        0xbt
+        0x9t
+        0x5t
+        0x3t
+        0x8t
+        0x4t
+        0x1t
+        0xet
+        0x8t
+        0xdt
+        0x6t
+        0x2t
+        0xbt
+        0xft
+        0xct
+        0x9t
+        0x7t
+        0x3t
+        0xat
+        0x5t
+        0x0t
+        0xft
+        0xct
+        0x8t
+        0x2t
+        0x4t
+        0x9t
+        0x1t
+        0x7t
+        0x5t
+        0xbt
+        0x3t
+        0xet
+        0xat
+        0x0t
+        0x6t
+        0xdt
+    .end array-data
+
+    :array_1b6
+    .array-data 1
+        0xft
+        0x1t
+        0x8t
+        0xet
+        0x6t
+        0xbt
+        0x3t
+        0x4t
+        0x9t
+        0x7t
+        0x2t
+        0xdt
+        0xct
+        0x0t
+        0x5t
+        0xat
+        0x3t
+        0xdt
+        0x4t
+        0x7t
+        0xft
+        0x2t
+        0x8t
+        0xet
+        0xct
+        0x0t
+        0x1t
+        0xat
+        0x6t
+        0x9t
+        0xbt
+        0x5t
+        0x0t
+        0xet
+        0x7t
+        0xbt
+        0xat
+        0x4t
+        0xdt
+        0x1t
+        0x5t
+        0x8t
+        0xct
+        0x6t
+        0x9t
+        0x3t
+        0x2t
+        0xft
+        0xdt
+        0x8t
+        0xat
+        0x1t
+        0x3t
+        0xft
+        0x4t
+        0x2t
+        0xbt
+        0x6t
+        0x7t
+        0xct
+        0x0t
+        0x5t
+        0xet
+        0x9t
+    .end array-data
+
+    :array_1da
+    .array-data 1
+        0xat
+        0x0t
+        0x9t
+        0xet
+        0x6t
+        0x3t
+        0xft
+        0x5t
+        0x1t
+        0xdt
+        0xct
+        0x7t
+        0xbt
+        0x4t
+        0x2t
+        0x8t
+        0xdt
+        0x7t
+        0x0t
+        0x9t
+        0x3t
+        0x4t
+        0x6t
+        0xat
+        0x2t
+        0x8t
+        0x5t
+        0xet
+        0xct
+        0xbt
+        0xft
+        0x1t
+        0xdt
+        0x6t
+        0x4t
+        0x9t
+        0x8t
+        0xft
+        0x3t
+        0x0t
+        0xbt
+        0x1t
+        0x2t
+        0xct
+        0x5t
+        0xat
+        0xet
+        0x7t
+        0x1t
+        0xat
+        0xdt
+        0x0t
+        0x6t
+        0x9t
+        0x8t
+        0x7t
+        0x4t
+        0xft
+        0xet
+        0x3t
+        0xbt
+        0x5t
+        0x2t
+        0xct
+    .end array-data
+
+    :array_1fe
+    .array-data 1
+        0x2t
+        0xct
+        0x4t
+        0x1t
+        0x7t
+        0xat
+        0xbt
+        0x6t
+        0x8t
+        0x5t
+        0x3t
+        0xft
+        0xdt
+        0x0t
+        0xet
+        0x9t
+        0xet
+        0xbt
+        0x2t
+        0xct
+        0x4t
+        0x7t
+        0xdt
+        0x1t
+        0x5t
+        0x0t
+        0xft
+        0xat
+        0x3t
+        0x9t
+        0x8t
+        0x6t
+        0x4t
+        0x2t
+        0x1t
+        0xbt
+        0xat
+        0xdt
+        0x7t
+        0x8t
+        0xft
+        0x9t
+        0xct
+        0x5t
+        0x6t
+        0x3t
+        0x0t
+        0xet
+        0xbt
+        0x8t
+        0xct
+        0x7t
+        0x1t
+        0xet
+        0x2t
+        0xdt
+        0x6t
+        0xft
+        0x0t
+        0x9t
+        0xat
+        0x4t
+        0x5t
+        0x3t
+    .end array-data
+
+    :array_222
+    .array-data 1
+        0xct
+        0x1t
+        0xat
+        0xft
+        0x9t
+        0x2t
+        0x6t
+        0x8t
+        0x0t
+        0xdt
+        0x3t
+        0x4t
+        0xet
+        0x7t
+        0x5t
+        0xbt
+        0xat
+        0xft
+        0x4t
+        0x2t
+        0x7t
+        0xct
+        0x9t
+        0x5t
+        0x6t
+        0x1t
+        0xdt
+        0xet
+        0x0t
+        0xbt
+        0x3t
+        0x8t
+        0x9t
+        0xet
+        0xft
+        0x5t
+        0x2t
+        0x8t
+        0xct
+        0x3t
+        0x7t
+        0x0t
+        0x4t
+        0xat
+        0x1t
+        0xdt
+        0xbt
+        0x6t
+        0x4t
+        0x3t
+        0x2t
+        0xct
+        0x9t
+        0x5t
+        0xft
+        0xat
+        0xbt
+        0xet
+        0x1t
+        0x7t
+        0x6t
+        0x0t
+        0x8t
+        0xdt
+    .end array-data
+
+    :array_246
+    .array-data 1
+        0xdt
+        0x2t
+        0x8t
+        0x4t
+        0x6t
+        0xft
+        0xbt
+        0x1t
+        0xat
+        0x9t
+        0x3t
+        0xet
+        0x5t
+        0x0t
+        0xct
+        0x7t
+        0x1t
+        0xft
+        0xdt
+        0x8t
+        0xat
+        0x3t
+        0x7t
+        0x4t
+        0xct
+        0x5t
+        0x6t
+        0xbt
+        0x0t
+        0xet
+        0x9t
+        0x2t
+        0x7t
+        0xbt
+        0x4t
+        0x1t
+        0x9t
+        0xct
+        0xet
+        0x2t
+        0x0t
+        0x6t
+        0xat
+        0xdt
+        0xft
+        0x3t
+        0x5t
+        0x8t
+        0x2t
+        0x1t
+        0xet
+        0x7t
+        0x4t
+        0xat
+        0x8t
+        0xdt
+        0xft
+        0xct
+        0x9t
+        0x0t
+        0x3t
+        0x5t
+        0x6t
+        0xbt
+    .end array-data
+
+    :array_26a
+    .array-data 1
+        0x7t
+        0xdt
+        0xet
+        0x3t
+        0x0t
+        0x6t
+        0x9t
+        0xat
+        0x1t
+        0x2t
+        0x8t
+        0x5t
+        0xbt
+        0xct
+        0x4t
+        0xft
+        0xdt
+        0x8t
+        0xbt
+        0x5t
+        0x6t
+        0xft
+        0x0t
+        0x3t
+        0x4t
+        0x7t
+        0x2t
+        0xct
+        0x1t
+        0xat
+        0xet
+        0x9t
+        0xat
+        0x6t
+        0x9t
+        0x0t
+        0xct
+        0xbt
+        0x7t
+        0xdt
+        0xft
+        0x1t
+        0x3t
+        0xet
+        0x5t
+        0x2t
+        0x8t
+        0x4t
+        0x3t
+        0xft
+        0x0t
+        0x6t
+        0xat
+        0x1t
+        0xdt
+        0x8t
+        0x9t
+        0x4t
+        0x5t
+        0xbt
+        0xct
+        0x7t
+        0x2t
+        0xet
+    .end array-data
+
+    :array_28e
+    .array-data 1
+        0x4t
+        0xbt
+        0x2t
+        0xet
+        0xft
+        0x0t
+        0x8t
+        0xdt
+        0x3t
+        0xct
+        0x9t
+        0x7t
+        0x5t
+        0xat
+        0x6t
+        0x1t
+        0xdt
+        0x0t
+        0xbt
+        0x7t
+        0x4t
+        0x9t
+        0x1t
+        0xat
+        0xet
+        0x3t
+        0x5t
+        0xct
+        0x2t
+        0xft
+        0x8t
+        0x6t
+        0x1t
+        0x4t
+        0xbt
+        0xdt
+        0xct
+        0x3t
+        0x7t
+        0xet
+        0xat
+        0xft
+        0x6t
+        0x8t
+        0x0t
+        0x5t
+        0x9t
+        0x2t
+        0x6t
+        0xbt
+        0xdt
+        0x8t
+        0x1t
+        0x4t
+        0xat
+        0x7t
+        0x9t
+        0x5t
+        0x0t
+        0xft
+        0xet
+        0x2t
+        0x3t
+        0xct
+    .end array-data
+
+    :array_2b2
+    .array-data 1
+        0x10t
+        0x7t
+        0x14t
+        0x15t
+        0x1dt
+        0xct
+        0x1ct
+        0x11t
+        0x1t
+        0xft
+        0x17t
+        0x1at
+        0x5t
+        0x12t
+        0x1ft
+        0xat
+        0x2t
+        0x8t
+        0x18t
+        0xet
+        0x20t
+        0x1bt
+        0x3t
+        0x9t
+        0x13t
+        0xdt
+        0x1et
+        0x6t
+        0x16t
+        0xbt
+        0x4t
+        0x19t
+    .end array-data
+
+    :array_2c6
+    .array-data 1
+        0xet
+        0x6t
+        0x10t
+        0xct
+        0xat
+        0xet
+        0x5t
+        0xct
+        0x12t
+        0xat
+        0xbt
+        0x6t
+        0xdt
+        0xet
+        0x5t
+    .end array-data
+
+    :array_2d2
+    .array-data 1
+        0xat
+        0x6t
+        0xet
+        0xet
+        0xat
+        0xbt
+        0x6t
+        0xet
+        0xbt
+        0x4t
+        0x4t
+        0x7t
+        0x11t
+        0xct
+        0xct
+    .end array-data
+.end method

@@ -1,0 +1,59 @@
+.class public Lcom/idm/fotaagent/utils/Formatted$DateTimeForLog;
+.super Lcom/idm/fotaagent/utils/Formatted;
+
+
+# annotations
+.annotation system Ldalvik/annotation/EnclosingClass;
+    value = Lcom/idm/fotaagent/utils/Formatted;
+.end annotation
+
+.annotation system Ldalvik/annotation/InnerClass;
+    accessFlags = 0x9
+    name = "DateTimeForLog"
+.end annotation
+
+
+# static fields
+.field private static final FORMATTER:Ljava/time/format/DateTimeFormatter;
+
+
+# direct methods
+.method static constructor <clinit>()V
+    .registers 2
+
+    const-string v0, "yyyy-MM-dd HH:mm:ss.SSS"
+
+    sget-object v1, Ljava/util/Locale;->US:Ljava/util/Locale;
+
+    invoke-static {v0, v1}, Ljava/time/format/DateTimeFormatter;->ofPattern(Ljava/lang/String;Ljava/util/Locale;)Ljava/time/format/DateTimeFormatter;
+
+    move-result-object v0
+
+    sput-object v0, Lcom/idm/fotaagent/utils/Formatted$DateTimeForLog;->FORMATTER:Ljava/time/format/DateTimeFormatter;
+
+    return-void
+.end method
+
+.method public constructor <init>(J)V
+    .registers 4
+
+    const/4 v0, 0x0
+
+    invoke-direct {p0, p1, p2, v0}, Lcom/idm/fotaagent/utils/Formatted;-><init>(JLcom/idm/fotaagent/utils/Formatted$1;)V
+
+    return-void
+.end method
+
+
+# virtual methods
+.method public toString()Ljava/lang/String;
+    .registers 2
+
+    sget-object v0, Lcom/idm/fotaagent/utils/Formatted$DateTimeForLog;->FORMATTER:Ljava/time/format/DateTimeFormatter;
+
+    invoke-virtual {p0, v0}, Lcom/idm/fotaagent/utils/Formatted;->by(Ljava/time/format/DateTimeFormatter;)Ljava/lang/String;
+
+    move-result-object v0
+
+    return-object v0
+.end method

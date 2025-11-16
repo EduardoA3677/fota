@@ -1,0 +1,18 @@
+.class public final LJ/v;
+.super Landroid/view/TouchDelegate;
+
+
+# instance fields
+.field public final a:Landroid/view/View;
+
+
+# direct methods
+.method public constructor <init>(Landroid/graphics/Rect;Landroid/view/View;)V
+    .registers 3
+
+    invoke-direct {p0, p1, p2}, Landroid/view/TouchDelegate;-><init>(Landroid/graphics/Rect;Landroid/view/View;)V
+
+    iput-object p2, p0, LJ/v;->a:Landroid/view/View;
+
+    return-void
+.end method

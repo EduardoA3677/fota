@@ -1,0 +1,21 @@
+.class public final Lv3/t;
+.super Lv3/f;
+
+# interfaces
+.implements LE3/a;
+
+
+# instance fields
+.field public final b:Ljava/lang/Enum;
+
+
+# direct methods
+.method public constructor <init>(LN3/f;Ljava/lang/Enum;)V
+    .registers 3
+
+    invoke-direct {p0, p1}, Lv3/f;-><init>(LN3/f;)V
+
+    iput-object p2, p0, Lv3/t;->b:Ljava/lang/Enum;
+
+    return-void
+.end method
